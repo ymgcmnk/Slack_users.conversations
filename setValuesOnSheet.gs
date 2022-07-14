@@ -1,48 +1,46 @@
-const USERID = "U*******"
+const USERID = "U0123456789"
 
 /**
+ * Function to create a new sheet and set values on it.
  * 新しいシートを作成して、そのシートに値をセットする関数。
  */
 function setValuesOnSheet() {
   const today = Utilities.formatDate(new Date(), 'JST', 'YYYYMMdd_HH:mm:ss');
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const newSheet = ss.insertSheet();
-  newSheet.setName(USERID +"_"+ today);
+  newSheet.setName(USERID + "_" + today);
 
-  const values = convertObjectToArray();
+  const values = objectToArray();
   console.log(values);
 
-  // sheet.getRange(1, 1, values.length, values[0].length).clear();
-  // SpreadsheetApp.flush();
   newSheet.getRange(1, 1, values.length, values[0].length).setValues(values);
 }
 
 
 /**
- * SlackApiからconversations.listで得たレスポンスをJSONからオブジェクトにしたものを配列にする、スプレッドシートに書き込むために
- * @return {array} arrayChannelsInfo - SlackApiからconversations.listで得たレスポンスをJSONからオブジェクトにしたものを配列に格納
+ * Function to convert a object to an array.(for set in a spreadsheet)
+ * オブジェクトにしたものを配列にする(スプレッドシートに書き込むために)
+ * @return {array} arrayChannelsInfo - チャンネル一覧が格納された配列
  * 
  * 参考
  * https://moripro.net/gas-object-to-array/
  */
-function convertObjectToArray() {
+function objectToArray() {
   const objectOfSlackConversationsListResponse = getResponseAsObject();
-  // console.log(objectOfSlackConversationsListResponse);
-  // return;
   const arrayHasChannelObjects = objectOfSlackConversationsListResponse.channels;//OK;true取り除く
   const arrayChannelsInfo = arrayHasChannelObjects.map(channel => [channel.name, channel.id, channel.is_channel, channel.is_archived]);
 
   const headers = ["channel.name", "channel.id", "channel.is_channel", "channel.is_archived"];
-   arrayChannelsInfo.unshift(headers)
+  arrayChannelsInfo.unshift(headers)
   console.log(arrayChannelsInfo);
-  // console.log(arrayChannelsInfo.length);
-  // console.log(arrayChannelsInfo[0].length);
   return arrayChannelsInfo;
 }
 
+
 /**
- * SlackApiからconversations.listで得たレスポンスをJSONからオブジェクトにする関数
- * @return {object} objectOfSlackConversationsListResponse - conversations.listのレスポンスをオブジェクトにしたもの
+ * Function to convert the response obtained by users.conversations from JSON to object
+ * users.conversationsで得たレスポンスをJSONからオブジェクトにする関数
+ * @return {object} objectOfSlackConversationsListResponse - users.conversationsのレスポンスをオブジェクトにしたもの
  * 
  * 参考
  * https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse
@@ -54,14 +52,14 @@ function getResponseAsObject() {
   return objectOfSlackConversationsListResponse;
 }
 
+
 /**
- * Slackユーザが所属しているチャンネルの取得
+ * List conversations the calling user may access.
+ * アクセスできる会話を一覧表示します。プライベートやDMグループは、その中にBotが入っていないと取得できない。
  * 
- * NOTE:プロジェクトの設定＞スクリプト プロパティ　でslackBotUserOAuthToken　設定しておく。
- * 
- * 参考
- * https://evolite.hatenablog.com/entry/20200721/1595260840#:~:text=slack%E3%81%AE%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E5%85%A5%E5%8A%9B%E6%AC%84,%E8%A1%A8%E7%A4%BA%E3%81%A7%E3%81%8D%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B%E3%80%82
- * https://dev.classmethod.jp/articles/201909-describe-channels-and-usergroups-from-slack/
+ * @return {JSON} - rawResponse
+ * NOTE: Need setting script property"BotUserOAuthToken"
+ * SEE: https://api.slack.com/methods/users.conversations
  */
 function getSlackConversationsList() {
   const token = PropertiesService.getScriptProperties().getProperty('BotUserOAuthToken');
@@ -73,19 +71,17 @@ function getSlackConversationsList() {
     contentType: "application/x-www-form-urlencoded",
     headers: { "Authorization": `Bearer ${token}` },
     "payload": {
-      "token": token,
-      // "cursor": cursor,
-      "exclude_archived": true,//ture =アーカイブされたチャンネルは除外する
-      "limit": 1000,
-      //  team_id: TEAMID,
+      "token": token,//Required arguments
+      // "cursor": cursor, //Optional arguments
+      "exclude_archived": true,//ture =アーカイブされたチャンネルは除外する　//Optional arguments
+      "limit": 1000, //Optional arguments
+      //  team_id: TEAMID, //Optional arguments
       "types": "public_channel, private_channel, mpim, im",//チャンネルタイプの指定。mpim=multiparty IM（DMのこと。indirect Messageか）
-      "user": USERID
+      "user": USERID //Optional arguments
     }
   }
 
   const rawResponse = UrlFetchApp.fetch(url, options);
   console.log(`rawResponse: ${rawResponse}`);
-  // const objResponse =JSON.parse(rawResponse);
-  // // console.log(`objResponse: ${objResponse}`);
   return rawResponse;
 }
